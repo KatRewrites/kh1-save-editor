@@ -1,0 +1,47 @@
+KH1 SAVE EDITOR — WINDOWS + STEAM DECK TESTING
+================================================
+
+Both packages use the exact same Python editor and save-format implementation.
+Only their launch/install method differs.
+
+WINDOWS — TEST NOW
+------------------
+1. Extract KH1_Save_Editor_Windows_v0.7.zip.
+2. If Python 3 is installed, double-click run_windows.bat.
+3. To create a standalone EXE, double-click build_windows_exe.bat.
+4. The builder runs all automated tests before creating:
+
+     dist\KH1_Save_Editor.exe
+
+The EXE can then be copied and launched without Python.
+
+STEAM DECK — TEST NOW
+---------------------
+1. Extract KH1_Save_Editor_SteamDeck_v0.7.zip in Desktop Mode.
+2. Open Konsole in the extracted folder.
+3. Run:
+
+     bash install_steamdeck.sh
+
+4. Launch KH1 Final Mix Save Editor from the application menu.
+
+STEAM CLOUD TEST SEQUENCE
+-------------------------
+1. Completely close Kingdom Hearts.
+2. Wait for Steam Cloud to show that synchronization is complete.
+3. Make a small editor change on one device.
+4. Reopen the editor to confirm the local value.
+5. Allow Steam to upload the save.
+6. On the other device, wait for Steam to download the cloud save.
+7. Open the editor there and confirm the same value.
+
+Never edit the save simultaneously on both devices. Keep the automatic editor
+backups until cross-device synchronization has been confirmed.
+
+WINDOWS BUILD LIMITATION FOR THIS TEST RELEASE
+----------------------------------------------
+The supplied release was assembled and validated in Linux. A Windows executable
+cannot be cross-built or honestly runtime-tested without a Windows environment.
+The included Windows builder creates the real EXE locally and refuses to build
+if the tests fail. A future CI release pipeline can publish that EXE
+automatically from a Windows runner.

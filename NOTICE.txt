@@ -1,0 +1,12 @@
+KH1 Final Mix PC Save Editor
+
+This application incorporates and ports data structures and reference tables
+from Xeeynamo/KingdomSaveEditor:
+https://github.com/Xeeynamo/KingdomSaveEditor
+
+KingdomSaveEditor is licensed under GPL-3.0. This application is therefore
+distributed under GPL-3.0 as well. Original copyrights remain with their
+respective contributors.
+
+Kingdom Hearts and related names are trademarks of their respective owners.
+This is an unofficial community tool.
