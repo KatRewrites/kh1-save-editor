@@ -1,6 +1,10 @@
 KH1 FINAL MIX PC SAVE EDITOR
 ========================================
 
+GUIDES
+  Install Guide:  docs/INSTALL.md
+  User Manual:    docs/USER_MANUAL.md
+
 A safety-first, cross-platform editor for KHFM_WW.png from:
   - Steam
   - Epic Games Store
@@ -29,6 +33,8 @@ SUPPORTED IN THIS RELEASE
   - Unsafe Level-only changes refused
   - World, room, and spawn location
   - Read-only Values Lab before/after comparison
+  - Synthesis tab: every Final Mix recipe with have/need counts, a made-item
+    checklist toward Ultima Weapon, and a total materials calculator
   - Timestamped backup before every write
   - One-click Backups Folder button (Explorer on Windows, Dolphin on Steam Deck)
   - Atomic saving, PNG CRC repair, and post-write reparsing
@@ -46,6 +52,8 @@ FILES
   kh1_save_core.py       PNG/archive parsing, validation, diff, and writing
   kh1_leveling.py        KH1FM level-growth and ability simulation tables
   kh1_reference.py       KH1 equipment and world reference tables
+  kh1_synthesis.py       Final Mix synthesis recipes and checklist
+  docs/                  Install Guide and User Manual
   install_steamdeck.sh   Steam Deck installer
   build_windows_exe.bat  Windows executable builder
   run_windows.bat        Run directly on Windows without building an .exe

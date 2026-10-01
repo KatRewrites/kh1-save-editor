@@ -29,10 +29,12 @@ mkdir -p "$ICON_DIR"
 mkdir -p "$(dirname "$DESKTOP_FILE")"
 
 echo "Copying files..."
-cp "$SCRIPT_DIR/kh1_save_editor.py" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/kh1_save_core.py" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/kh1_reference.py" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/kh1_leveling.py" "$INSTALL_DIR/"
+cp "$SCRIPT_DIR"/kh1_*.py "$INSTALL_DIR/"
+for banner in banner.png banner.gif; do
+    if [ -f "$SCRIPT_DIR/$banner" ]; then
+        cp "$SCRIPT_DIR/$banner" "$INSTALL_DIR/"
+    fi
+done
 
 # Launcher
 LAUNCHER="$INSTALL_DIR/launch.sh"
