@@ -84,6 +84,12 @@ To build a standalone executable instead, run:
 
 The executable appears under dist/KH1_Save_Editor.exe.
 
+CUSTOM BANNER (OPTIONAL)
+------------------------
+Put a banner.png (or banner.gif) next to kh1_save_editor.py, or next to the
+built .exe, and it appears across the top of the window. About 1000x190
+pixels works well. No artwork is included with the project.
+
 IMPORTANT SAFETY NOTES
 ----------------------
   - Never test with your only copy of a save.

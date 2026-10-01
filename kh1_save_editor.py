@@ -7,6 +7,7 @@ from pathlib import Path
 import os
 import shutil
 import subprocess
+import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -74,6 +75,16 @@ ABILITY_CHOICES = ("00 — Empty",) + tuple(
 )
 
 
+def _app_dir() -> Path:
+    """Folder holding the editor (or the built .exe)."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+BANNER_NAMES = ("banner.png", "banner.gif")
+
+
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -130,6 +141,18 @@ class App(tk.Tk):
             background=BG3,
             foreground=TEXT,
         )
+        style.map(
+            "TCombobox",
+            fieldbackground=[("readonly", ENTRY_BG), ("disabled", BG3)],
+            foreground=[("readonly", TEXT), ("disabled", DIM)],
+            selectbackground=[("readonly", ENTRY_BG)],
+            selectforeground=[("readonly", TEXT)],
+            background=[("readonly", BG3)],
+        )
+        self.option_add("*TCombobox*Listbox.background", ENTRY_BG)
+        self.option_add("*TCombobox*Listbox.foreground", TEXT)
+        self.option_add("*TCombobox*Listbox.selectBackground", ACCENT2)
+        self.option_add("*TCombobox*Listbox.selectForeground", "white")
         style.configure(
             "TSpinbox",
             fieldbackground=ENTRY_BG,
@@ -155,16 +178,43 @@ class App(tk.Tk):
         style.map("Save.TButton", background=[("active", "#c93652")])
         style.configure("TCheckbutton", background=BG2, foreground=TEXT)
 
+    def _build_banner(self):
+        """Show an optional user-supplied banner image across the top.
+
+        Drop banner.png (or banner.gif) next to the editor to use one. No
+        artwork ships with the project.
+        """
+        self.banner_image = None
+        for name in BANNER_NAMES:
+            candidate = _app_dir() / name
+            if candidate.is_file():
+                try:
+                    self.banner_image = tk.PhotoImage(file=str(candidate))
+                except tk.TclError:
+                    continue
+                break
+        if self.banner_image is None:
+            return False
+        tk.Label(
+            self, image=self.banner_image, bg=BG, anchor="w", bd=0
+        ).pack(fill="x")
+        return True
+
     def _build_ui(self):
+        has_banner = self._build_banner()
+        if has_banner:
+            self.geometry("900x820")
         toolbar = tk.Frame(self, bg=BG, padx=12, pady=9)
         toolbar.pack(fill="x")
-        tk.Label(
+        title = tk.Label(
             toolbar,
             text="◆ KH1 Final Mix Save Editor",
             bg=BG,
             fg=ACCENT,
             font=("Segoe UI", 14, "bold"),
-        ).pack(side="left")
+        )
+        if not has_banner:
+            title.pack(side="left")
         ttk.Button(
             toolbar, text="Save", style="Save.TButton", command=self._save
         ).pack(side="right", padx=(5, 0))
