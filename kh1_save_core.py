@@ -261,9 +261,37 @@ def enumerate_slots(payload: bytes) -> list[dict]:
     return slots
 
 
-def update_slot(payload: bytearray, slot: dict, changes: dict) -> None:
-    """Apply validated authoritative fields to one extracted KH1FM record."""
+LEVEL_COMPANION_FIELDS = ("exp", "hp", "mp", "ap", "strength", "defense")
+
+
+def update_slot(
+    payload: bytearray,
+    slot: dict,
+    changes: dict,
+    *,
+    allow_raw_level: bool = False,
+) -> None:
+    """Apply validated authoritative fields to one extracted KH1FM record.
+
+    A level change must arrive together with matching EXP and stat changes
+    (as produced by kh1_leveling.simulate_leveling). A bare level edit leaves
+    EXP, stats and abilities out of sync with the level, so it is refused
+    unless allow_raw_level=True is passed explicitly.
+    """
     stat_base = slot["stat_base"]
+
+    if (
+        "level" in changes
+        and changes["level"] != slot.get("level")
+        and not allow_raw_level
+    ):
+        missing = [name for name in LEVEL_COMPANION_FIELDS if name not in changes]
+        if missing:
+            raise ValueError(
+                "Level-only edits are refused because EXP and stats would no "
+                "longer match the level. Use simulate_leveling() to build the "
+                "full change set. Missing: " + ", ".join(missing) + "."
+            )
 
     def write_u8(relative: int, value: int, low: int, high: int, label: str):
         if not isinstance(value, int) or not low <= value <= high:

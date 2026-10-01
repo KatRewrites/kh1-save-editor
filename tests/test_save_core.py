@@ -227,13 +227,26 @@ class SaveCoreTests(unittest.TestCase):
                 first_added,
             )
 
+    def test_level_only_update_is_refused_without_exp_and_stats(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "KHFM_WW.png"
+            path.write_bytes(fixture_png())
+            save = load_save(path)
+            changed = bytearray(save.payload)
+            before = bytes(changed)
+            with self.assertRaises(ValueError):
+                update_slot(changed, save.slots[0], {"level": 100})
+            self.assertEqual(bytes(changed), before)
+
     def test_level_update_changes_both_mirrored_records(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "KHFM_WW.png"
             path.write_bytes(fixture_png())
             save = load_save(path)
             changed = bytearray(save.payload)
-            update_slot(changed, save.slots[0], {"level": 100})
+            update_slot(
+                changed, save.slots[0], {"level": 100}, allow_raw_level=True
+            )
             self.assertEqual(
                 changed[save.slots[0]["stat_base"] + STAT_LEVEL],
                 100,
