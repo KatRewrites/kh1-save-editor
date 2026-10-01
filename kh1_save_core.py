@@ -521,8 +521,11 @@ def discover_save_files(
     roots = []
     requested_home = Path(home).expanduser() if home else Path.home()
     roots.append(requested_home)
+    # An explicit home means "search only here" (used by tests and by callers
+    # pointing at a specific profile). Otherwise also check the Windows
+    # profile, which can differ from Path.home() under some launchers.
     user_profile = os.environ.get("USERPROFILE")
-    if user_profile:
+    if home is None and user_profile and Path(user_profile) != requested_home:
         roots.append(Path(user_profile))
 
     proton_suffixes = (
