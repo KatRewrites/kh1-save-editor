@@ -90,6 +90,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("KH1 Final Mix Save Editor")
+        self.protocol("WM_DELETE_WINDOW", self._close)
         self.geometry("900x720")
         self.minsize(760, 560)
         self.configure(bg=BG)
@@ -1086,7 +1087,40 @@ the destination.
                 f"{error}\n\nBackup folder:\n{backup_folder}",
             )
 
+    def _has_unsaved_changes(self):
+        if self.container is None:
+            return False
+        try:
+            return bool(self._collect_changes())
+        except Exception:
+            return True
+
+    def _confirm_discard(self, action):
+        if not self._has_unsaved_changes():
+            return True
+        discard = messagebox.askyesno(
+            "Unsaved changes",
+            f"Slot {self.current_slot + 1} has changes that haven't been saved.\n\n"
+            f"{action} anyway and discard them?",
+            icon="warning",
+        )
+        if discard:
+            self.level_plans.pop(self.current_slot, None)
+        return discard
+
+    def _switch_slot(self, index):
+        if index == self.current_slot:
+            return
+        if self._confirm_discard("Switch slots"):
+            self._load_slot(index)
+
+    def _close(self):
+        if self._confirm_discard("Close the editor"):
+            self.destroy()
+
     def _load_path(self, path):
+        if not self._confirm_discard("Open another save"):
+            return
         try:
             container = load_save(path)
         except Exception as error:
@@ -1177,7 +1211,7 @@ the destination.
                 relief="flat",
                 padx=10,
                 pady=5,
-                command=lambda selected=index: self._load_slot(selected),
+                command=lambda selected=index: self._switch_slot(selected),
             )
             button.pack(side="left", padx=(0, 5))
             self.slot_buttons.append(button)
@@ -1590,6 +1624,12 @@ the destination.
             messagebox.showinfo(
                 "Saved safely",
                 f"Changes written and reparsed successfully.\n\nBackup:\n{backup}",
+            )
+        except tk.TclError:
+            messagebox.showerror(
+                "Save refused",
+                "One of the number fields is empty or isn't a whole number. "
+                "Fill it in (use 0 for none) and press Save again.",
             )
         except Exception as error:
             messagebox.showerror("Save refused", str(error))
