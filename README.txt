@@ -48,6 +48,7 @@ FILES
   kh1_reference.py       KH1 equipment and world reference tables
   install_steamdeck.sh   Steam Deck installer
   build_windows_exe.bat  Windows executable builder
+  run_windows.bat        Run directly on Windows without building an .exe
   tests/                 Automated safety and format tests
 
 STEAM DECK
@@ -71,7 +72,13 @@ Press Ctrl+H in Dolphin to show the hidden .local directory.
 
 WINDOWS
 -------
-Install Python 3.8 or newer from python.org with tkinter enabled, then run:
+Install Python 3.8 or newer from python.org with tkinter enabled.
+
+To run it directly, double-click:
+
+  run_windows.bat
+
+To build a standalone executable instead, run:
 
   build_windows_exe.bat
 
@@ -91,6 +98,29 @@ IMPORTANT SAFETY NOTES
     or use the editor's Abilities tab to equip the ones you want.
   - The ability high bit means Equipped. Equipping more AP than Sora owns can
     produce an invalid setup, so simulated abilities deliberately start off.
+
+TESTED SO FAR
+-------------
+  - Steam Deck (Steam): an inventory edit was loaded in-game and confirmed.
+  - Windows 11 (Steam, Python 3.14): tests pass, save is found and read, and
+    the editor opens. In-game confirmation on Windows is still pending.
+  - Epic and Re:Fined: save discovery is supported but not yet confirmed by a
+    real user. Reports welcome.
+
+REPORTING BUGS
+--------------
+Open an issue at:
+
+  https://github.com/KatRewrites/kh1-save-editor/issues
+
+Please include:
+  - Platform (Windows, Steam Deck, or Linux) and store (Steam, Epic, Re:Fined)
+  - Editor version or commit
+  - What you changed, what you expected, and what happened in-game
+  - Any error message, copied as text
+  - If possible, your backup .bak file from KH1_Save_Editor_Backups
+
+Always keep your own backup copy before editing.
 
 LICENSE AND ATTRIBUTION
 -----------------------
