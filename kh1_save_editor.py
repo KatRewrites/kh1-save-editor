@@ -11,6 +11,7 @@ import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+import kh1_synthesis as synth
 from kh1_reference import EQUIPMENT, EQUIPMENT_BY_ID, KEYBLADES, WORLDS
 from kh1_leveling import (
     ABILITY_NAMES,
@@ -176,6 +177,27 @@ class App(tk.Tk):
             padding=(12, 7),
         )
         style.map("Save.TButton", background=[("active", "#c93652")])
+        style.configure(
+            "Treeview",
+            background=ENTRY_BG,
+            fieldbackground=ENTRY_BG,
+            foreground=TEXT,
+            rowheight=24,
+            borderwidth=0,
+        )
+        style.map(
+            "Treeview",
+            background=[("selected", ACCENT2)],
+            foreground=[("selected", "white")],
+        )
+        style.configure(
+            "Treeview.Heading",
+            background=BG3,
+            foreground=ACCENT,
+            font=("Segoe UI", 10, "bold"),
+            relief="flat",
+        )
+        style.map("Treeview.Heading", background=[("active", BG3)])
         style.configure("TCheckbutton", background=BG2, foreground=TEXT)
 
     def _build_banner(self):
@@ -263,6 +285,7 @@ class App(tk.Tk):
         inventory = ttk.Frame(notebook)
         keyblades = ttk.Frame(notebook)
         abilities = ttk.Frame(notebook)
+        synthesis = ttk.Frame(notebook)
         help_tab = ttk.Frame(notebook)
         notebook.add(character, text="Character & World")
         notebook.add(donald, text="Donald")
@@ -271,6 +294,7 @@ class App(tk.Tk):
         notebook.add(inventory, text="Inventory")
         notebook.add(keyblades, text="Keyblades")
         notebook.add(abilities, text="Abilities")
+        notebook.add(synthesis, text="Synthesis")
         notebook.add(help_tab, text="Help")
 
         self._build_character_tab(character)
@@ -280,7 +304,15 @@ class App(tk.Tk):
         self._build_inventory_tab(inventory)
         self._build_keyblade_tab(keyblades)
         self._build_abilities_tab(abilities)
+        self._build_synthesis_tab(synthesis)
         self._build_help_tab(help_tab)
+        self.synthesis_tab = synthesis
+        notebook.bind(
+            "<<NotebookTabChanged>>",
+            lambda _event: self._refresh_synthesis()
+            if notebook.select() == str(synthesis)
+            else None,
+        )
 
         self.status = tk.Label(
             self,
@@ -713,6 +745,224 @@ class App(tk.Tk):
                 sticky="w",
             )
 
+    # ----- Synthesis checklist -------------------------------------------
+    def _build_synthesis_tab(self, parent):
+        self.synthesis_made = set()
+        self.synthesis_key = None
+        header = tk.Frame(parent, bg=BG, padx=10, pady=8)
+        header.pack(fill="x")
+        self.synthesis_progress = tk.Label(
+            header,
+            text="Load a save to compare recipes with your materials.",
+            bg=BG,
+            fg=ACCENT,
+            font=("Segoe UI", 11, "bold"),
+            anchor="w",
+            justify="left",
+        )
+        self.synthesis_progress.pack(fill="x")
+        tk.Label(
+            header,
+            text=(
+                "Double-click an item (or press Space) to tick it off once the "
+                "Moogles have made it. Ticks are saved per save slot on this "
+                "computer and never written into the game save."
+            ),
+            bg=BG,
+            fg=DIM,
+            anchor="w",
+            justify="left",
+            wraplength=820,
+        ).pack(fill="x", pady=(2, 0))
+
+        panes = ttk.PanedWindow(parent, orient="vertical")
+        panes.pack(fill="both", expand=True, padx=10, pady=(0, 8))
+
+        top = ttk.Frame(panes)
+        columns = ("made", "item", "list", "materials", "status")
+        tree = ttk.Treeview(top, columns=columns, show="headings", height=12)
+        for key, title, width, anchor in (
+            ("made", "Made", 54, "center"),
+            ("item", "Item", 150, "w"),
+            ("list", "List", 44, "center"),
+            ("materials", "Materials (have / need)", 420, "w"),
+            ("status", "Status", 150, "w"),
+        ):
+            tree.heading(key, text=title)
+            tree.column(key, width=width, anchor=anchor, stretch=key == "materials")
+        tree.tag_configure("made", foreground=DIM)
+        tree.tag_configure("ready", foreground="#6fdc8c")
+        tree.tag_configure("short", foreground=TEXT)
+        tree.tag_configure("locked", foreground="#8a7f9e")
+        scroll = ttk.Scrollbar(top, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        scroll.pack(side="right", fill="y")
+        tree.pack(side="left", fill="both", expand=True)
+        tree.bind("<Double-1>", self._toggle_synthesis_item)
+        tree.bind("<space>", self._toggle_synthesis_item)
+        self.synthesis_tree = tree
+        panes.add(top, weight=3)
+
+        bottom = ttk.Frame(panes)
+        tk.Label(
+            bottom,
+            text="Calculator: materials still needed to make every unticked item once",
+            bg=BG,
+            fg=ACCENT,
+            font=("Segoe UI", 10, "bold"),
+            anchor="w",
+        ).pack(fill="x", pady=(6, 2))
+        totals = ttk.Treeview(
+            bottom,
+            columns=("material", "have", "need", "short"),
+            show="headings",
+            height=7,
+        )
+        for key, title, width in (
+            ("material", "Material", 200),
+            ("have", "Have", 70),
+            ("need", "Need", 70),
+            ("short", "Still short", 90),
+        ):
+            totals.heading(key, text=title)
+            totals.column(key, width=width, anchor="w" if key == "material" else "center")
+        totals.tag_configure("done", foreground=DIM)
+        totals.tag_configure("short", foreground="#ff8a9b")
+        total_scroll = ttk.Scrollbar(bottom, orient="vertical", command=totals.yview)
+        totals.configure(yscrollcommand=total_scroll.set)
+        total_scroll.pack(side="right", fill="y")
+        totals.pack(side="left", fill="both", expand=True)
+        self.synthesis_totals = totals
+        panes.add(bottom, weight=2)
+        tk.Label(
+            parent,
+            text=(
+                "Mythril and Dark Matter can also be synthesized, and Orichalcum "
+                "can be bought at the Item Shop. Recipe data: KH Wiki, Final Mix."
+            ),
+            bg=BG,
+            fg=DIM,
+            anchor="w",
+            padx=10,
+        ).pack(fill="x", pady=(0, 6))
+        self._refresh_synthesis()
+
+    def _synthesis_owned(self):
+        owned = {}
+        if self.container is None:
+            return owned
+        for item_id, variable in self.inventory_vars.items():
+            item = EQUIPMENT_BY_ID.get(item_id)
+            if not item:
+                continue
+            try:
+                owned[item["name"]] = int(variable.get())
+            except (tk.TclError, ValueError):
+                owned[item["name"]] = 0
+        return owned
+
+    def _current_synthesis_key(self):
+        if self.container is None or self.path is None:
+            return None
+        return f"{Path(self.path).resolve()}#slot{self.current_slot + 1}"
+
+    def _refresh_synthesis(self):
+        if not hasattr(self, "synthesis_tree"):
+            return
+        key = self._current_synthesis_key()
+        if key != self.synthesis_key:
+            self.synthesis_key = key
+            self.synthesis_made = synth.load_checklist(key) if key else set()
+        owned = self._synthesis_owned()
+        made = self.synthesis_made
+        info = synth.progress(made)
+
+        tree = self.synthesis_tree
+        tree.delete(*tree.get_children())
+        for name, number, materials in synth.RECIPES:
+            status = synth.recipe_status(materials, owned)
+            parts = [
+                f"{row['material']} {row['have']}/{row['need']}"
+                for row in status["rows"]
+            ]
+            locked = (
+                number == 6 and not info["ultima_unlocked"]
+            ) or number > info["highest_list"]
+            if name in made:
+                label, tag = "Made", "made"
+            elif self.container is None:
+                label, tag = "", "short"
+            elif locked:
+                needs = synth.LIST_UNLOCKS[number] - info["made"]
+                label, tag = f"Locked (make {needs} more)", "locked"
+            elif status["ready"]:
+                label, tag = "Ready to make", "ready"
+            else:
+                short = sum(row["short"] for row in status["rows"])
+                label, tag = f"Short {short} material(s)", "short"
+            tree.insert(
+                "",
+                "end",
+                iid=name,
+                values=(
+                    "☑" if name in made else "☐",
+                    name,
+                    synth.LIST_NAMES[number],
+                    ",  ".join(parts),
+                    label,
+                ),
+                tags=(tag,),
+            )
+
+        totals = self.synthesis_totals
+        totals.delete(*totals.get_children())
+        for row in synth.remaining_materials(made, owned):
+            totals.insert(
+                "",
+                "end",
+                values=(row["material"], row["have"], row["need"], row["short"] or "✓"),
+                tags=("short" if row["short"] else "done",),
+            )
+
+        if self.container is None:
+            text = "Load a save to compare recipes with your materials."
+        else:
+            text = f"Made {info['made']} of {info['total']} items on Lists I–V. "
+            if info["ultima_made"]:
+                text += "Ultima Weapon made. Master Synthesist! "
+            elif info["ultima_unlocked"]:
+                text += "List VI is open: Ultima Weapon can be made. "
+            else:
+                text += (
+                    f"{info['total'] - info['made']} more to unlock Ultima Weapon. "
+                )
+            if info["next_list"] and info["next_list"] <= 5:
+                text += (
+                    f"List {synth.LIST_NAMES[info['next_list']]} opens after "
+                    f"{info['next_needs']} more."
+                )
+        self.synthesis_progress.configure(text=text)
+
+    def _toggle_synthesis_item(self, _event=None):
+        if self.synthesis_key is None:
+            return
+        selection = self.synthesis_tree.selection()
+        if not selection:
+            return
+        name = selection[0]
+        if name in self.synthesis_made:
+            self.synthesis_made.discard(name)
+        else:
+            self.synthesis_made.add(name)
+        try:
+            synth.save_checklist(self.synthesis_key, self.synthesis_made)
+        except OSError as error:
+            messagebox.showwarning("Checklist not saved", str(error))
+        self._refresh_synthesis()
+        if self.synthesis_tree.exists(name):
+            self.synthesis_tree.selection_set(name)
+            self.synthesis_tree.focus(name)
+
     def _build_help_tab(self, parent):
         text = tk.Text(
             parent,
@@ -1061,6 +1311,7 @@ the destination.
                         f"{ability_id:02X} — {ABILITY_NAMES[ability_id]}"
                     )
                     self.ability_equipped_vars[slot_index].set(False)
+        self._refresh_synthesis()
 
     def _simulate_leveling_dialog(self):
         if not self.container:
